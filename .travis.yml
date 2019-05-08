@@ -1,0 +1,49 @@
+language: cpp
+
+sudo: required
+dist: xenial
+
+branches:
+  only:
+    - master
+
+env:
+  - QT_VER=qt5123
+
+
+install:
+  - export QT_ZIP=${QT_VER}_x11-static.txz
+  - wget https://github.com/mmatyas/pegasus-frontend/releases/download/alpha1/${QT_ZIP} -P /tmp/
+  - sudo tar xJf /tmp/${QT_ZIP} -C /opt/
+
+script:
+  - export QMAKE=/opt/${QT_VER}_x11-static/bin/qmake
+  - mkdir build && cd build
+  - ${QMAKE} ..
+      QMAKE_CXXFLAGS="-g -O0 --coverage -fprofile-arcs -ftest-coverage"
+      QMAKE_LDFLAGS="-g -O0 --coverage -fprofile-arcs -ftest-coverage"
+      LIBS+="-lgcov"
+      CONFIG+=debug
+  - make
+  - lcov --compat-libtool -i -c -d . -o coverage.pre
+  - make check
+  - lcov --compat-libtool -c -d . -o coverage.post
+  - lcov --compat-libtool -a coverage.pre -a coverage.post -o coverage.total
+  - lcov --compat-libtool -r coverage.total
+      '/usr/*'
+      '/opt/*'
+      '*/moc_*'
+      '*/qrc_*'
+      '*/test_*'
+      -o coverage.clean
+
+addons:
+  apt:
+    packages:
+      - lcov
+      - libgl1-mesa-dev
+      - libxkbcommon-dev
+      - libxkbcommon-x11-dev
+
+services:
+  - xvfb
